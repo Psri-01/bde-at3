@@ -43,9 +43,9 @@ models:
       +materialized: table
     # Configuration for Gold layer models (Facts, Dimensions, Reference)
     gold:
-      +schema: gold
+      +schema: dwh_gold # FIX: Use a unique name to avoid schema inheritance issue
       +materialized: table
     # Configuration for Datamart views (MUST be views)
     datamart:
-      +schema: datamart
+      +schema: dwh_datamart
       +materialized: view

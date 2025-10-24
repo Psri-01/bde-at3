@@ -21,7 +21,7 @@ WITH base AS (
         PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY f.price) AS median_price,
         AVG(f.price) AS avg_price
         
-    FROM {{ ref('fact_airbnb_revenue') }} f
+    FROM {{ source('silver_gold', 'fact_airbnb_revenue') }} f
     
     -- FIX: Ensure joins are correct (using listing_date from FACT table)
     JOIN {{ ref('dim_host') }} d 
