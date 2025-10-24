@@ -7,6 +7,7 @@ WITH lga_lookup AS (
         lgc.lga_code 
     FROM {{ ref('stg_lga_suburb') }} lgs
     JOIN {{ ref('stg_lga_code') }} lgc 
+        -- Joins the suburb mapping table to the LGA code table on LGA name
         ON UPPER(TRIM(lgs.lga_name)) = UPPER(TRIM(lgc.lga_name))
 ),
 
@@ -21,8 +22,8 @@ final_fact AS (
         
         -- Foreign Key Aliases (FKs)
         host.host_id AS host_fk,
-        lga.lga_code AS lga_fk, -- Now joins to the dim table
-        sub.neighbourhood_unique_key AS neighbourhood_fk,
+        lga.lga_code AS lga_fk, -- This is the key from the dim_lga
+        sub.neighbourhood_unique_key AS neighbourhood_fk, -- Correct FK based on snapshot unique_key
 
         -- Calculated Metrics
         (30 - stg.availability_30) AS number_of_stays,
@@ -31,6 +32,7 @@ final_fact AS (
         stg.snapshot_month
         
     FROM {{ ref('stg_airbnb_listings') }} stg
+    
     -- Need to join to lookup table first to get LGA code (lkg)
     LEFT JOIN lga_lookup lkg
         ON UPPER(TRIM(stg.listing_neighbourhood)) = UPPER(TRIM(lkg.suburb_name))
