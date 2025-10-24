@@ -9,7 +9,3 @@ sources:
       - name: census_g02_raw
       - name: nsw_lga_code_raw
       - name: nsw_lga_suburb_raw
-  - name: materialized_gold
-    schema: silver_gold # The actual schema where dbt materialized the fact table
-    tables:
-      - name: fact_airbnb_revenue

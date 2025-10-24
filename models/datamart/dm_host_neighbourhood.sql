@@ -11,7 +11,7 @@ WITH base AS (
         -- FIX: Use ROUND correctly on the ratio
         ROUND(SUM(f.estimated_revenue) / COUNT(DISTINCT f.host_fk), 2) AS est_revenue_per_host
         
-    FROM {{ source('materialized_gold', 'fact_airbnb_revenue') }} f
+    FROM {{ ref('fact_airbnb_revenue') }} f
     
     -- Join to dim_lga for LGA name/grouping (SCD2 Logic)
     LEFT JOIN {{ ref('dim_lga') }} l

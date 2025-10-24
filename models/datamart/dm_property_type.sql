@@ -2,29 +2,39 @@
 
 WITH base AS (
     SELECT
-        f.property_type,
-        f.room_type,
-        f.accommodates,
-        DATE_TRUNC('month', f.period_month) AS month,
-        COUNT(*) AS total_listings,
-        SUM(f.is_active) AS active_listings,
-        COUNT(DISTINCT f.host_id) AS distinct_hosts,
-        SUM(CASE WHEN d.host_is_superhost THEN 1 ELSE 0 END) AS superhosts,
-        AVG(f.review_scores_rating) AS avg_rating,
-        SUM(f.number_of_stays) AS total_stays,
-        AVG(f.estimated_revenue) AS avg_estimated_revenue,
-        MIN(f.price) AS min_price,
-        MAX(f.price) AS max_price,
-        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY f.price) AS median_price,
-        AVG(f.price) AS avg_price
-    FROM {{ source('materialized_gold', 'fact_airbnb_revenue') }} f
-    JOIN {{ ref('dim_host') }} d ON f.host_id = d.host_id
-    GROUP BY 1, 2, 3, 4
+        f.listing_id,
+        f.snapshot_month,
+        h.host_id,
+        h.host_is_superhost,
+        f.price,
+        f.number_of_stays,
+        f.estimated_revenue,
+        f.review_scores_rating,
+        f.has_availability,
+        n.neighbourhood_name,
+
+        DATE_TRUNC('month', f.snapshot_month::TIMESTAMP) AS month_year
+    FROM {{ ref('fact_airbnb_revenue') }} f
+    JOIN {{ ref('dim_host') }} h
+        ON f.host_fk = h.host_id
+       AND f.snapshot_month BETWEEN h.dbt_valid_from AND COALESCE(h.dbt_valid_to, '9999-12-31'::TIMESTAMP)
+    JOIN {{ ref('dim_neighbourhood') }} n
+        ON f.neighbourhood_fk = n.neighbourhood_name
+       AND f.snapshot_month BETWEEN n.dbt_valid_from AND COALESCE(n.dbt_valid_to, '9999-12-31'::TIMESTAMP)
 )
 
 SELECT
-    *,
-    ROUND((active_listings::NUMERIC / total_listings::NUMERIC) * 100, 2) AS active_listing_rate,
-    ROUND((superhosts::NUMERIC / distinct_hosts::NUMERIC) * 100, 2) AS superhost_rate
+    neighbourhood_name,
+    DATE_TRUNC('month', month_year) AS month_year,
+    COUNT(DISTINCT listing_id) AS total_listings,
+    COUNT(DISTINCT host_id) AS distinct_hosts,
+    SUM(CASE WHEN has_availability THEN 1 ELSE 0 END) AS active_listings,
+    SUM(CASE WHEN host_is_superhost THEN 1 ELSE 0 END) AS superhosts_count,
+    ROUND(AVG(review_scores_rating)::numeric, 2) AS avg_rating,
+    ROUND(AVG(estimated_revenue)::numeric, 2) AS avg_estimated_revenue,
+    MIN(price) AS min_price,
+    MAX(price) AS max_price,
+    ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price)::numeric, 2) AS median_price
 FROM base
-ORDER BY property_type, room_type, accommodates, month
+GROUP BY 1, 2
+ORDER BY 1, 2

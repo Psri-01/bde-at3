@@ -21,7 +21,7 @@ WITH base AS (
         PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY f.price) AS median_price,
         AVG(f.price) AS avg_price
         
-    FROM {{ source('materialized_gold', 'fact_airbnb_revenue') }} f
+    FROM {{ ref('fact_airbnb_revenue') }} f
     
     -- FIX: Ensure joins are correct (using listing_date from FACT table)
     JOIN {{ ref('dim_host') }} d 
@@ -42,4 +42,4 @@ SELECT
     -- NOTE: Percentage change must be calculated here using LAG() or similar window functions
     
 FROM base
-ORDER BY listing_neighbourhood, month
+ORDER BY listing_neighbourhood, month_year
