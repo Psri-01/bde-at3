@@ -3,7 +3,7 @@
 WITH base AS (
     SELECT
         sub.neighbourhood_name AS listing_neighbourhood,
-        DATE_TRUNC('month', f.listing_date) AS month,
+        DATE_TRUNC('month', f.listing_date::TIMESTAMP) AS month_year, -- FIX: Use listing_date and explicit TIMESTAMP cast
         
         COUNT(f.listing_id) AS total_listings,
         SUM(CASE WHEN f.has_availability = TRUE THEN 1 ELSE 0 END) AS active_listings,
@@ -23,12 +23,11 @@ WITH base AS (
         
     FROM {{ ref('fact_airbnb_revenue') }} f
     
-    -- FIX 2: Implement mandatory SCD2 Join for dim_host
+    -- FIX: Ensure joins are correct (using listing_date from FACT table)
     JOIN {{ ref('dim_host') }} d 
         ON f.host_fk = d.host_id
        AND f.listing_date BETWEEN d.dbt_valid_from AND COALESCE(d.dbt_valid_to, '9999-12-31'::TIMESTAMP)
        
-    -- Join to dim_neighbourhood using SCD2 logic
     JOIN {{ ref('dim_neighbourhood') }} sub
         ON f.neighbourhood_fk = sub.neighbourhood_unique_key
        AND f.listing_date BETWEEN sub.dbt_valid_from AND COALESCE(sub.dbt_valid_to, '9999-12-31'::TIMESTAMP)
