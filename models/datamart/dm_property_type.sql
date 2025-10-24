@@ -27,4 +27,4 @@ SELECT
     ROUND((active_listings::NUMERIC / total_listings::NUMERIC) * 100, 2) AS active_listing_rate,
     ROUND((superhosts::NUMERIC / distinct_hosts::NUMERIC) * 100, 2) AS superhost_rate
 FROM base
-ORDER BY property_type, room_type, accommodates, month;
+ORDER BY property_type, room_type, accommodates, month

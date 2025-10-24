@@ -2,27 +2,45 @@
 
 WITH base AS (
     SELECT
-        f.listing_neighbourhood,
-        DATE_TRUNC('month', f.period_month) AS month,
-        COUNT(*) AS total_listings,
-        SUM(f.is_active) AS active_listings,
+        sub.neighbourhood_name AS listing_neighbourhood,
+        DATE_TRUNC('month', f.listing_date) AS month,
+        
+        COUNT(f.listing_id) AS total_listings,
+        SUM(CASE WHEN f.has_availability = TRUE THEN 1 ELSE 0 END) AS active_listings,
+        
+        -- FIX 1: Use the correct column name from dim_host (host_is_superhost)
+        SUM(CASE WHEN d.host_is_superhost = TRUE THEN 1 ELSE 0 END) AS superhosts_count,
+        COUNT(DISTINCT f.host_fk) AS distinct_hosts,
+        
         AVG(f.review_scores_rating) AS avg_rating,
-        COUNT(DISTINCT f.host_id) AS distinct_hosts,
-        SUM(CASE WHEN d.host_is_superhost THEN 1 ELSE 0 END) AS superhosts,
         SUM(f.number_of_stays) AS total_stays,
-        AVG(f.estimated_revenue) AS avg_estimated_revenue,
+        
+        AVG(CASE WHEN f.has_availability = TRUE THEN f.estimated_revenue END) AS avg_estimated_revenue,
         MIN(f.price) AS min_price,
         MAX(f.price) AS max_price,
         PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY f.price) AS median_price,
         AVG(f.price) AS avg_price
+        
     FROM {{ ref('fact_airbnb_revenue') }} f
-    JOIN {{ ref('dim_host') }} d ON f.host_id = d.host_id
+    
+    -- FIX 2: Implement mandatory SCD2 Join for dim_host
+    JOIN {{ ref('dim_host') }} d 
+        ON f.host_fk = d.host_id
+       AND f.listing_date BETWEEN d.dbt_valid_from AND COALESCE(d.dbt_valid_to, '9999-12-31'::TIMESTAMP)
+       
+    -- Join to dim_neighbourhood using SCD2 logic
+    JOIN {{ ref('dim_neighbourhood') }} sub
+        ON f.neighbourhood_fk = sub.neighbourhood_unique_key
+       AND f.listing_date BETWEEN sub.dbt_valid_from AND COALESCE(sub.dbt_valid_to, '9999-12-31'::TIMESTAMP)
+
     GROUP BY 1, 2
 )
 
 SELECT
     *,
     ROUND((active_listings::NUMERIC / total_listings::NUMERIC) * 100, 2) AS active_listing_rate,
-    ROUND((superhosts::NUMERIC / distinct_hosts::NUMERIC) * 100, 2) AS superhost_rate
+    ROUND((superhosts_count::NUMERIC / distinct_hosts::NUMERIC) * 100, 2) AS superhost_rate
+    -- NOTE: Percentage change must be calculated here using LAG() or similar window functions
+    
 FROM base
-ORDER BY listing_neighbourhood, month;
+ORDER BY listing_neighbourhood, month

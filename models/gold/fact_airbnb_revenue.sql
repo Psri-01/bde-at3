@@ -1,4 +1,9 @@
-{{ config(materialized='table', schema='gold', tags=['fact']) }}
+{{ config(
+    materialized='incremental',
+    unique_key='listing_id',
+    schema='gold', 
+    tags=['fact']
+) }}
 
 -- Re-create LGA lookup within the fact model for guaranteed column existence
 WITH lga_lookup AS (
@@ -55,4 +60,10 @@ final_fact AS (
      
     WHERE stg.listing_id IS NOT NULL
 )
+
+{% if is_incremental() %}
+    -- Filter on the snapshot_month column for incremental loads
+    WHERE snapshot_month > (SELECT MAX(snapshot_month) FROM {{ this }})
+{% endif %}
+
 SELECT * FROM final_fact
