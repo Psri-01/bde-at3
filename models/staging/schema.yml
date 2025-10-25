@@ -4,7 +4,8 @@ sources:
   - name: bronze
     schema: bronze # Postgres schema where Airflow loads the data
     tables:
-      - name: airbnb_listings_raw # Postgres table name
+      - name: airbnb_listings_raw
+      - name: airbnb_hosts_raw 
       - name: census_g01_raw
       - name: census_g02_raw
       - name: nsw_lga_code_raw
