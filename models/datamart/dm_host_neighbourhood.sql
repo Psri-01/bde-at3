@@ -12,7 +12,7 @@ WITH base AS (
         ROUND(SUM(f.estimated_revenue) / COUNT(DISTINCT f.host_fk), 2) AS est_revenue_per_host
         
     FROM {{ ref('fact_airbnb_revenue') }} f
-    
+
     -- Join to dim_lga for LGA name/grouping (SCD2 Logic)
     LEFT JOIN {{ ref('dim_lga') }} l
         ON f.lga_fk = l.lga_code
