@@ -1,28 +1,21 @@
-{{ config(materialized='view', schema='datamart', tags=['datamart']) }}
+{{ config(materialized='view', schema='datamart') }}
 
-WITH base AS (
-    SELECT
-        COALESCE(l.lga_name, sub.neighbourhood_name) AS host_neighbourhood_lga,
-        DATE_TRUNC('month', f.listing_date::TIMESTAMP) AS month_year,
-        
-        COUNT(DISTINCT f.host_fk) AS distinct_hosts,
-        SUM(f.estimated_revenue) AS total_estimated_revenue,
-        
-        ROUND(SUM(f.estimated_revenue) / COUNT(DISTINCT f.host_fk), 2) AS est_revenue_per_host
-        
-    FROM {{ ref('fact_airbnb_revenue') }} f
-
-    -- Join to dim_lga for LGA name/grouping (SCD2 Logic)
-    LEFT JOIN {{ ref('dim_lga') }} l
-        ON f.lga_fk = l.lga_code
-        AND f.listing_date BETWEEN l.dbt_valid_from AND COALESCE(l.dbt_valid_to, '9999-12-31'::TIMESTAMP)
-        
-    -- Join to dim_neighbourhood to get the name if LGA is missing (NO SCD2)
-    JOIN {{ ref('dim_neighbourhood') }} sub
-        ON f.neighbourhood_fk = sub.neighbourhood_unique_key
-
-    GROUP BY 1, 2
-)
-
-SELECT * FROM base
-ORDER BY host_neighbourhood_lga, month_year
+SELECT
+    f.host_id,
+    h.host_name,
+    h.host_is_superhost,
+    n.neighbourhood_name,
+    l.lga_name,
+    COUNT(DISTINCT f.listing_id) AS total_listings,
+    ROUND(AVG(f.price), 2) AS avg_price,
+    ROUND(AVG(f.number_of_reviews), 2) AS avg_reviews,
+    ROUND(AVG(f.availability_30), 2) AS avg_availability,
+    f.snapshot_month
+FROM {{ ref('fact_airbnb_revenue') }} f
+LEFT JOIN {{ ref('dim_host') }} h
+    ON f.host_id = h.host_id
+LEFT JOIN {{ ref('dim_neighbourhood') }} n
+    ON f.neighbourhood_name = n.neighbourhood_name
+LEFT JOIN {{ ref('dim_lga') }} l
+    ON f.lga_name = l.lga_name
+GROUP BY 1, 2, 3, 4, 5, 10
