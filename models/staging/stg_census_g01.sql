@@ -1,32 +1,21 @@
-{{
-    config(
-        materialized='table',
-        schema='silver',
-        tags=['staging', 'census']
-    )
-}}
+{{ config(tags=['staging','census']) }}
 
-SELECT
-    lga_code_2016::varchar         AS lga_code,
-    tot_p_p::integer               AS total_persons,
-
-    -- Age bands (population distribution)
-    age_0_4_yr_p::integer          AS age_0_4,
-    age_5_14_yr_p::integer         AS age_5_14,
-    age_15_19_yr_p::integer        AS age_15_19,
-    age_20_24_yr_p::integer        AS age_20_24,
-    age_25_34_yr_p::integer        AS age_25_34,
-    age_35_44_yr_p::integer        AS age_35_44,
-    age_45_54_yr_p::integer        AS age_45_54,
-    age_55_64_yr_p::integer        AS age_55_64,
-    age_65_74_yr_p::integer        AS age_65_74,
-    age_75_84_yr_p::integer        AS age_75_84,
-    age_85ov_p::integer            AS age_85_plus,
-
-    count_psns_occ_priv_dwgs_p::integer AS occupied_private_dwellings,
-
-    source_file,
-    snapshot_month,
-    ingested_at
-FROM {{ source('bronze', 'census_g01_raw') }}
-WHERE lga_code_2016 IS NOT NULL
+select
+  trim(lga_code_2016::text)                         as lga_code,
+  nullif(trim(tot_p_p::text),'')::numeric(12,0)           as total_persons,
+  nullif(trim(age_0_4_yr_p::text),'')::numeric(12,0)      as age_0_4,
+  nullif(trim(age_5_14_yr_p::text),'')::numeric(12,0)     as age_5_14,
+  nullif(trim(age_15_19_yr_p::text),'')::numeric(12,0)    as age_15_19,
+  nullif(trim(age_20_24_yr_p::text),'')::numeric(12,0)    as age_20_24,
+  nullif(trim(age_25_34_yr_p::text),'')::numeric(12,0)    as age_25_34,
+  nullif(trim(age_35_44_yr_p::text),'')::numeric(12,0)    as age_35_44,
+  nullif(trim(age_45_54_yr_p::text),'')::numeric(12,0)    as age_45_54,
+  nullif(trim(age_55_64_yr_p::text),'')::numeric(12,0)    as age_55_64,
+  nullif(trim(age_65_74_yr_p::text),'')::numeric(12,0)    as age_65_74,
+  nullif(trim(age_75_84_yr_p::text),'')::numeric(12,0)    as age_75_84,
+  nullif(trim(age_85ov_p::text),'')::numeric(12,0)        as age_85_plus,
+  nullif(trim(count_psns_occ_priv_dwgs_p::text),'')::numeric(12,0)
+      as occupied_private_dwellings,
+  source_file, snapshot_month, ingested_at
+from {{ source('bronze','census_g01_raw') }}
+where lga_code_2016 is not null
