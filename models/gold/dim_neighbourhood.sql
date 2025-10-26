@@ -1,26 +1,9 @@
-{{
-    config(
-        materialized='table',
-        schema='dwh_gold'
-    )
-}}
+{{ config(materialized='table', schema='gold') }}
 
-WITH neighbourhoods AS (
-    SELECT
-        neighbourhood_unique_key,
-        neighbourhood_name,
-        room_type,
-        COALESCE(property_type, 'Unknown') AS property_type,
-        latest_listing_date
-    FROM {{ ref('silver_neighbourhoods') }}
-)
-
-SELECT
-    n.neighbourhood_unique_key,
-    n.neighbourhood_name,
-    n.room_type,
-    n.property_type,
-    CAST(NULL AS VARCHAR) AS lga_code,
-    CAST(NULL AS VARCHAR) AS lga_name,
-    n.latest_listing_date
-FROM neighbourhoods AS n
+SELECT DISTINCT
+    listing_neighbourhood AS neighbourhood_name,
+    room_type,
+    DATE_TRUNC('month', CURRENT_TIMESTAMP)::date AS snapshot_month,
+    CURRENT_TIMESTAMP::timestamp AS load_date
+FROM {{ source('bronze', 'airbnb_listings_raw') }}
+WHERE listing_neighbourhood IS NOT NULL
