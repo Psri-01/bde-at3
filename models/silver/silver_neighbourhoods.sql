@@ -14,4 +14,7 @@ SELECT
     MAX(scraped_date)::timestamp AS latest_listing_date
 FROM {{ source('bronze', 'airbnb_listings_raw') }}
 WHERE listing_neighbourhood IS NOT NULL
-GROUP BY listing_neighbourhood, room_type, property_type
+GROUP BY
+    listing_neighbourhood,
+    room_type,
+    property_type

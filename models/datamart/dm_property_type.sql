@@ -12,15 +12,18 @@ WITH base AS (
         f.review_scores_rating,
         f.has_availability,
         n.neighbourhood_name,
-
         DATE_TRUNC('month', f.snapshot_month::TIMESTAMP) AS month_year
+        
     FROM {{ ref('fact_airbnb_revenue') }} f
+    
+    -- Join to dim_host (SCD2 Logic)
     JOIN {{ ref('dim_host') }} h
         ON f.host_fk = h.host_id
        AND f.snapshot_month BETWEEN h.dbt_valid_from AND COALESCE(h.dbt_valid_to, '9999-12-31'::TIMESTAMP)
+       
+    -- Join to dim_neighbourhood (NO SCD2)
     JOIN {{ ref('dim_neighbourhood') }} n
-        ON f.neighbourhood_fk = n.neighbourhood_name
-       AND f.snapshot_month BETWEEN n.dbt_valid_from AND COALESCE(n.dbt_valid_to, '9999-12-31'::TIMESTAMP)
+        ON f.neighbourhood_fk = n.neighbourhood_unique_key
 )
 
 SELECT
@@ -35,6 +38,7 @@ SELECT
     MIN(price) AS min_price,
     MAX(price) AS max_price,
     ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price)::numeric, 2) AS median_price
+    
 FROM base
 GROUP BY 1, 2
 ORDER BY 1, 2
