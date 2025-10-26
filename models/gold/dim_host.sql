@@ -1,12 +1,13 @@
-{{ config(materialized='table', schema='gold') }}
-
+{{ config(tags=['gold','dim']) }}
 SELECT
     h.host_id,
     h.host_name,
     h.host_since,
-    h.host_is_superhost,
-    COALESCE(CAST(h.total_listings_count AS INT), 0) AS total_listings_count,
-    h.snapshot_month,
-    CURRENT_TIMESTAMP::timestamp AS load_date
-FROM {{ ref('host_snapshot') }} AS h
+    h.host_location,
+    CASE
+        WHEN LOWER(h.host_location) LIKE '%sydney%' THEN 'Sydney'
+        WHEN LOWER(h.host_location) LIKE '%nsw%' THEN 'NSW'
+        ELSE 'Other'
+    END AS host_region
+FROM {{ ref('host_entity') }} AS h
 WHERE h.host_id IS NOT NULL

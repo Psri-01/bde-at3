@@ -1,9 +1,13 @@
-{{ config(materialized='table', schema='gold') }}
+{{ config(tags=['gold','dim']) }}
 
-SELECT DISTINCT
-    listing_neighbourhood AS neighbourhood_name,
-    room_type,
-    DATE_TRUNC('month', CURRENT_TIMESTAMP)::date AS snapshot_month,
-    CURRENT_TIMESTAMP::timestamp AS load_date
-FROM {{ source('bronze', 'airbnb_listings_raw') }}
-WHERE listing_neighbourhood IS NOT NULL
+with dom as (
+  select distinct listing_neighbourhood as neighbourhood_name
+  from {{ ref('stg_listings') }}
+  where listing_neighbourhood is not null
+)
+select
+  d.neighbourhood_name,
+  n.lga_name
+from dom d
+left join {{ ref('nbhd_to_lga') }} m on lower(d.neighbourhood_name) = m.suburb_name_lower
+left join {{ ref('stg_lga_code') }} n on m.lga_name = n.lga_name

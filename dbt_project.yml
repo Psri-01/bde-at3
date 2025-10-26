@@ -1,15 +1,19 @@
-name: 'airbnb_sydney_dw'
-version: '1.0.0'
+name: "airbnb_sydney_dw"
+version: "1.0.0"
 config-version: 2
 
-profile: 'airbnb_sydney'
+profile: "airbnb_sydney"
 
 model-paths: ["models"]
-seeds:
-  airbnb_sydney_dw:
-    +schema: bronze
-    +quote_columns: false
+snapshot-paths: ["snapshots"]
+macro-paths: ["macros"]
+seed-paths: ["seeds"]
 
+# Settings
+# seeds:
+#   airbnb_sydney_dw:
+#     +schema: bronze
+#     +quote_columns: false
 
 models:
   airbnb_sydney_dw:

@@ -1,20 +1,18 @@
-{{ config(materialized='view', schema='silver_datamart') }}
+{{ config(materialized='table') }}
+
+WITH listing_neighbourhood AS (
+    SELECT
+        listing_neighbourhood,
+        COUNT(DISTINCT listing_id) AS active_listings,
+        SUM(estimated_revenue) AS total_estimated_revenue
+    FROM {{ ref('fact_listing_monthly') }}
+    GROUP BY 1
+)
 
 SELECT
-    f.listing_id,
-    f.host_id,
-    d.host_name,
-    f.neighbourhood_name,
-    f.lga_name,
-    f.room_type,
-    f.price,
-    f.number_of_reviews,
-    f.availability_30,
-    f.snapshot_month
-FROM {{ ref('fact_airbnb_revenue') }} f
-LEFT JOIN {{ ref('dim_host') }} d
-    ON f.host_id = d.host_id
-LEFT JOIN {{ ref('dim_neighbourhood') }} n
-    ON f.neighbourhood_name = n.neighbourhood_name
-LEFT JOIN {{ ref('dim_lga') }} l
-    ON f.lga_name = l.lga_name
+    listing_neighbourhood,
+    active_listings,
+    total_estimated_revenue,
+    CASE WHEN active_listings > 0 THEN total_estimated_revenue / active_listings ELSE 0 END AS avg_revenue_per_listing
+FROM listing_neighbourhood
+ORDER BY total_estimated_revenue DESC
